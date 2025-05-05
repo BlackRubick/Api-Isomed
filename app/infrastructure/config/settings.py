@@ -19,7 +19,7 @@ class Settings(BaseSettings):
 
     # Configuración de la base de datos
     DATABASE_URL: str = Field(
-        os.environ.get("DATABASE_URL", "mysql+pymysql://root:manuel@localhost:3306/isomed")
+        os.environ.get("DATABASE_URL", "mysql+pymysql://root:guillermo@localhost:3306/isomed")
     )
 
     # Configuración JWT

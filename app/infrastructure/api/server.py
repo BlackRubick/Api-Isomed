@@ -35,7 +35,7 @@ app = FastAPI(
 # Configuración de CORS mejorada
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En producción, especificar los orígenes permitidos
+    allow_origins=["https://isomed.com.mx"],  # En producción, especificar los orígenes permitidos
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
