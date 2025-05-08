@@ -48,7 +48,8 @@ app.add_middleware(
         "http://localhost:3000",
         "http://www.isomed.com.mx./",
         "https://www.isomed.com.mx./",
-        "http://www.isomed.com.mx"
+        "http://www.isomed.com.mx",
+        "http://www.isomed.com.mx."  # Agregado sin barra al final
     ],
     allow_credentials=True,
     allow_methods=["*"],
