@@ -11,7 +11,7 @@ from app.domain.exceptions import UserAlreadyExistsException, InvalidCredentials
 from app.infrastructure.adapters.persistence.sqlalchemy_user_repository import SQLAlchemyUsuarioRepository
 from app.infrastructure.adapters.security.jwt_manager import JWTManager
 from app.infrastructure.db.database import get_db
-
+from typing import Optional
 # Configuración de logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("auth_controller")
@@ -24,7 +24,7 @@ class UserRegistrationRequest(BaseModel):
     password: str
     confirmPassword: str
     numero_cliente: str = ""
-    id_cliente: int = None
+    id_cliente: Optional[int] = None 
 
 
 class UserResponse(BaseModel):
