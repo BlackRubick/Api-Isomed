@@ -49,7 +49,8 @@ app.add_middleware(
         "http://www.isomed.com.mx./",
         "https://www.isomed.com.mx./",
         "http://www.isomed.com.mx",
-        "http://www.isomed.com.mx."  # Agregado sin barra al final
+        "http://www.isomed.com.mx.",
+        "https://www.isomed.com.mx/",
     ],
     allow_credentials=True,
     allow_methods=["*"],
