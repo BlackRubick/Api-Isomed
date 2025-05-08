@@ -10,6 +10,7 @@ from app.infrastructure.api.controllers.auth_controller import router as auth_ro
 from app.infrastructure.api.controllers.cliente_controller import router as cliente_router
 from app.infrastructure.api.controllers.producto_controller import router as producto_router
 from app.infrastructure.api.controllers.orden_trabajo_controller import router as orden_trabajo_router
+from app.infrastructure.api.controllers.admin_controller import router as admin_router  # Nuevo router
 from app.infrastructure.config.settings import Settings
 from app.infrastructure.db.database import Base, engine
 
@@ -55,6 +56,7 @@ app.include_router(auth_router)
 app.include_router(cliente_router)
 app.include_router(producto_router)
 app.include_router(orden_trabajo_router)
+app.include_router(admin_router)  # Agregamos el nuevo router
 
 
 # Middleware para loguear solicitudes
