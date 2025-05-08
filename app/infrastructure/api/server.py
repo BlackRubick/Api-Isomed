@@ -45,7 +45,9 @@ app.add_middleware(
         "https://isomed.com.mx",
         "http://54.161.137.230",
         "http://34.232.185.39:8000",
-        "http://localhost:3000"
+        "http://localhost:3000",
+        "http://www.isomed.com.mx./",
+        "https://www.isomed.com.mx./"
     ],
     allow_credentials=True,
     allow_methods=["*"],
