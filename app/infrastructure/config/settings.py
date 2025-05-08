@@ -27,7 +27,7 @@ class Settings(BaseSettings):
         os.environ.get("SECRET_KEY", "tu_clave_secreta_muy_segura_aqui")
     )
     JWT_ALGORITHM: str = Field("HS256", env="JWT_ALGORITHM")
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(30, env="ACCESS_TOKEN_EXPIRE_MINUTES")
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(480, env="ACCESS_TOKEN_EXPIRE_MINUTES")
 
     # CORS
     CORS_ORIGINS: list = ["*"]
