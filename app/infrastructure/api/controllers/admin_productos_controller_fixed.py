@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request, Header
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, OperationalError
+from sqlalchemy import text
 from typing import List, Optional
 
 from app.domain.entities.producto import Producto
@@ -194,73 +195,68 @@ async def delete_producto(
     db: Session = Depends(get_db),
     is_admin: bool = Depends(verify_admin_token)
 ):
-    """Elimina un producto usando token fijo."""
+    """Elimina un producto usando token fijo y SQL directo."""
     try:
         logger.info(f"Eliminando producto {producto_id}")
 
-        # Primero verificamos si hay órdenes asociadas a este producto
-        from sqlalchemy import text
-        check_query = text("""
-            SELECT COUNT(*) as count FROM tableORDENDETRABAJO 
-            WHERE idPRODUCTO_FK = :producto_id
-        """)
+        # Verificar si el producto existe
+        check_product_query = text("SELECT COUNT(*) FROM tablePRODUCTO WHERE idPRODUCTO = :id")
+        product_check = db.execute(check_product_query, {"id": producto_id}).scalar()
 
-        result = db.execute(check_query, {"producto_id": producto_id})
-        orden_count = result.fetchone()[0]
-
-        if orden_count > 0:
-            logger.warning(f"No se puede eliminar el producto {producto_id} porque está siendo utilizado en {orden_count} órdenes de trabajo.")
+        if product_check == 0:
+            logger.warning(f"Producto con ID {producto_id} no encontrado")
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"No se puede eliminar el producto porque está siendo utilizado en {orden_count} órdenes de trabajo."
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Producto con ID {producto_id} no encontrado"
             )
 
-        producto_repository = SQLAlchemyProductoRepository(db)
+        # Verificar si hay órdenes de trabajo que usan este producto
+        check_orders_query = text("""
+            SELECT COUNT(*) 
+            FROM tableORDENDETRABAJO 
+            WHERE idPRODUCTO_FK = :id
+        """)
 
-        # Intentar eliminar
         try:
-            result = producto_repository.delete(producto_id)
+            orders_count = db.execute(check_orders_query, {"id": producto_id}).scalar()
 
-            if not result:
+            if orders_count > 0:
+                logger.warning(f"No se puede eliminar el producto {producto_id} porque está siendo utilizado en {orders_count} órdenes")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"No se puede eliminar el producto porque está siendo utilizado en {orders_count} órdenes de trabajo"
+                )
+        except Exception as e:
+            logger.warning(f"Error al verificar órdenes: {str(e)}. Continuando con la eliminación...")
+
+        # Eliminar producto mediante SQL directo
+        try:
+            delete_query = text("DELETE FROM tablePRODUCTO WHERE idPRODUCTO = :id")
+            result = db.execute(delete_query, {"id": producto_id})
+            db.commit()
+
+            affected_rows = result.rowcount
+            logger.info(f"Producto {producto_id} eliminado. Filas afectadas: {affected_rows}")
+
+            if affected_rows == 0:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail=f"Producto con ID {producto_id} no encontrado"
                 )
 
-            logger.info(f"Producto {producto_id} eliminado exitosamente")
-
             return None
-        except IntegrityError as e:
-            logger.error(f"Error de integridad al eliminar producto {producto_id}: {str(e)}")
+        except Exception as e:
             db.rollback()
+            logger.error(f"Error al eliminar producto: {str(e)}")
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No se puede eliminar el producto porque está siendo utilizado en otras partes del sistema."
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error al eliminar producto: {str(e)}"
             )
-        except OperationalError as e:
-            logger.error(f"Error operacional al eliminar producto {producto_id}: {str(e)}")
-            db.rollback()
-
-            # Intentar una alternativa más simple si hay problemas con la estructura de la tabla
-            try:
-                # Ejecutar SQL directo si necesitamos evitar SQLAlchemy
-                query = text("DELETE FROM tablePRODUCTO WHERE idPRODUCTO = :id")
-                db.execute(query, {"id": producto_id})
-                db.commit()
-                logger.info(f"Producto {producto_id} eliminado con SQL directo")
-                return None
-            except Exception as e2:
-                db.rollback()
-                logger.error(f"Error con SQL directo: {str(e2)}")
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f"Error interno del servidor: No se pudo eliminar el producto"
-                )
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error al eliminar producto {producto_id}: {str(e)}", exc_info=True)
+        logger.error(f"Error general al eliminar producto {producto_id}: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error interno del servidor: {str(e)}"
