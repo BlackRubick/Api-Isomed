@@ -11,7 +11,8 @@ from app.infrastructure.api.controllers.cliente_controller import router as clie
 from app.infrastructure.api.controllers.producto_controller import router as producto_router
 from app.infrastructure.api.controllers.orden_trabajo_controller import router as orden_trabajo_router
 from app.infrastructure.api.controllers.admin_controller import router as admin_router
-from app.infrastructure.api.controllers.admin_controller_fixed import router as admin_fixed_router  # Nuevo controlador
+from app.infrastructure.api.controllers.admin_controller_fixed import router as admin_fixed_router
+from app.infrastructure.api.controllers.admin_productos_controller_fixed import router as admin_productos_fixed_router  # Nuevo router
 from app.infrastructure.config.settings import Settings
 from app.infrastructure.db.database import Base, engine
 
@@ -58,7 +59,8 @@ app.include_router(cliente_router)
 app.include_router(producto_router)
 app.include_router(orden_trabajo_router)
 app.include_router(admin_router)
-app.include_router(admin_fixed_router)  # Incluir el router de admin con token fijo
+app.include_router(admin_fixed_router)
+app.include_router(admin_productos_fixed_router)  # Incluir el router de productos con token fijo
 
 
 # Middleware para loguear solicitudes
