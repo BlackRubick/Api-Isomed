@@ -35,13 +35,15 @@ app = FastAPI(
 # Configuración de CORS mejorada
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://isomed.com.mx"],  # En producción, especificar los orígenes permitidos
+    allow_origins=[
+        "https://isomed.com.mx",
+        "http://54.161.137.230"   
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"],
 )
-
 # Incluir routers
 app.include_router(auth_router)
 
