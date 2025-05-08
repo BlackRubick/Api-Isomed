@@ -3,7 +3,7 @@ Puerto para el repositorio de usuarios.
 """
 from abc import ABC, abstractmethod
 from typing import Optional, List
-from app.domain.entities.usuario import Usuario
+from app.domain.entities.user import Usuario
 
 
 class UsuarioRepository(ABC):
