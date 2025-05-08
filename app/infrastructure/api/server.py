@@ -40,7 +40,8 @@ app.add_middleware(
 =======
     allow_origins=[
         "https://isomed.com.mx",
-        "http://54.161.137.230"
+        "http://54.161.137.230",
+        "http://34.232.185.39:8000"
     ],
 >>>>>>> c4459b64e00a22471025c3448f0600721f20f3de
     allow_credentials=True,
