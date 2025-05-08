@@ -57,8 +57,8 @@ class AuthServiceImpl(AuthService):
             id=user.id,
             nombre_completo=user.nombre_completo,
             email=user.email,
-            numero_cliente=user.numero_cliente,
-            id_cliente=user.id_cliente
+            numero_cliente=user.numero_cliente if hasattr(user, 'numero_cliente') else "",
+            id_cliente=user.id_cliente if hasattr(user, 'id_cliente') and user.id_cliente is not None else None
         )
 
         return LoginResponseDto(token=token, user=user_response)

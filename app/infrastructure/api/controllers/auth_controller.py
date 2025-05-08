@@ -24,7 +24,7 @@ class UserRegistrationRequest(BaseModel):
     password: str
     confirmPassword: str
     numero_cliente: str = ""
-    id_cliente: Optional[int] = None 
+    id_cliente: Optional[int] = None
 
 
 class UserResponse(BaseModel):
@@ -32,9 +32,12 @@ class UserResponse(BaseModel):
     nombre_completo: str
     email: str
     numero_cliente: str = ""
-    id_cliente: int = None
+    id_cliente: Optional[int] = None
 
-
+    model_config = {
+            "extra": "ignore",  # Ignora campos extra
+            "validate_assignment": True,  # Valida asignaciones
+        }
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
@@ -126,8 +129,9 @@ async def login(request: LoginRequest, req: Request, auth_service: AuthServiceIm
                 id=result.user.id,
                 nombre_completo=result.user.nombre_completo,
                 email=result.user.email,
-                numero_cliente=result.user.numero_cliente,
-                id_cliente=result.user.id_cliente
+                numero_cliente=result.user.numero_cliente if hasattr(result.user, 'numero_cliente') else "",
+                id_cliente=result.user.id_cliente if hasattr(result.user,
+                                                             'id_cliente') and result.user.id_cliente is not None else None
             )
         )
     except InvalidCredentialsException as e:
@@ -146,9 +150,9 @@ async def login(request: LoginRequest, req: Request, auth_service: AuthServiceIm
 
 @router.get("/me", response_model=UserResponse)
 def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    auth_service: AuthServiceImpl = Depends(get_auth_service),
-    db: Session = Depends(get_db)
+        token: str = Depends(oauth2_scheme),
+        auth_service: AuthServiceImpl = Depends(get_auth_service),
+        db: Session = Depends(get_db)
 ):
     """Obtiene el usuario actual basado en el token."""
     try:
@@ -166,12 +170,22 @@ def get_current_user(
             )
 
         logger.info(f"Información de usuario recuperada para: {user.email}")
+
+        # Manejo seguro de valores potencialmente nulos
+        id_cliente_value = None
+        if hasattr(user, 'id_cliente') and user.id_cliente is not None:
+            id_cliente_value = user.id_cliente
+
+        numero_cliente_value = ""
+        if hasattr(user, 'numero_cliente') and user.numero_cliente is not None:
+            numero_cliente_value = user.numero_cliente
+
         return UserResponse(
             id=user.id,
             nombre_completo=user.nombre_completo,
             email=user.email,
-            numero_cliente=user.numero_cliente,
-            id_cliente=user.id_cliente
+            numero_cliente=numero_cliente_value,
+            id_cliente=id_cliente_value
         )
     except InvalidTokenException:
         logger.warning("Token inválido o expirado")
