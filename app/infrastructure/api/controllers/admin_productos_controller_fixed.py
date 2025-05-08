@@ -5,6 +5,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Header
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError, OperationalError
 from typing import List, Optional
 
 from app.domain.entities.producto import Producto
@@ -17,7 +18,6 @@ logger = logging.getLogger("admin_productos_controller_fixed")
 
 # Configurar token fijo para administrador
 ADMIN_TOKEN = "admin_fixed_token_12345"
-
 
 # Modelos de Pydantic
 class ProductoRequestDto(BaseModel):
@@ -103,9 +103,9 @@ async def get_all_productos(db: Session = Depends(get_db), is_admin: bool = Depe
 
 @router.post("/productos", response_model=ProductoResponseDto, status_code=status.HTTP_201_CREATED)
 async def create_producto(
-        request: ProductoRequestDto,
-        db: Session = Depends(get_db),
-        is_admin: bool = Depends(verify_admin_token)
+    request: ProductoRequestDto,
+    db: Session = Depends(get_db),
+    is_admin: bool = Depends(verify_admin_token)
 ):
     """Crea un nuevo producto usando token fijo."""
     try:
@@ -142,10 +142,10 @@ async def create_producto(
 
 @router.put("/productos/{producto_id}", response_model=ProductoResponseDto)
 async def update_producto(
-        producto_id: int,
-        request: ProductoRequestDto,
-        db: Session = Depends(get_db),
-        is_admin: bool = Depends(verify_admin_token)
+    producto_id: int,
+    request: ProductoRequestDto,
+    db: Session = Depends(get_db),
+    is_admin: bool = Depends(verify_admin_token)
 ):
     """Actualiza un producto existente usando token fijo."""
     try:
@@ -190,28 +190,72 @@ async def update_producto(
 
 @router.delete("/productos/{producto_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_producto(
-        producto_id: int,
-        db: Session = Depends(get_db),
-        is_admin: bool = Depends(verify_admin_token)
+    producto_id: int,
+    db: Session = Depends(get_db),
+    is_admin: bool = Depends(verify_admin_token)
 ):
     """Elimina un producto usando token fijo."""
     try:
         logger.info(f"Eliminando producto {producto_id}")
 
+        # Primero verificamos si hay órdenes asociadas a este producto
+        from sqlalchemy import text
+        check_query = text("""
+            SELECT COUNT(*) as count FROM tableORDENDETRABAJO 
+            WHERE idPRODUCTO_FK = :producto_id
+        """)
+
+        result = db.execute(check_query, {"producto_id": producto_id})
+        orden_count = result.fetchone()[0]
+
+        if orden_count > 0:
+            logger.warning(f"No se puede eliminar el producto {producto_id} porque está siendo utilizado en {orden_count} órdenes de trabajo.")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"No se puede eliminar el producto porque está siendo utilizado en {orden_count} órdenes de trabajo."
+            )
+
         producto_repository = SQLAlchemyProductoRepository(db)
 
         # Intentar eliminar
-        result = producto_repository.delete(producto_id)
+        try:
+            result = producto_repository.delete(producto_id)
 
-        if not result:
+            if not result:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Producto con ID {producto_id} no encontrado"
+                )
+
+            logger.info(f"Producto {producto_id} eliminado exitosamente")
+
+            return None
+        except IntegrityError as e:
+            logger.error(f"Error de integridad al eliminar producto {producto_id}: {str(e)}")
+            db.rollback()
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Producto con ID {producto_id} no encontrado"
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No se puede eliminar el producto porque está siendo utilizado en otras partes del sistema."
             )
+        except OperationalError as e:
+            logger.error(f"Error operacional al eliminar producto {producto_id}: {str(e)}")
+            db.rollback()
 
-        logger.info(f"Producto {producto_id} eliminado exitosamente")
-
-        return None
+            # Intentar una alternativa más simple si hay problemas con la estructura de la tabla
+            try:
+                # Ejecutar SQL directo si necesitamos evitar SQLAlchemy
+                query = text("DELETE FROM tablePRODUCTO WHERE idPRODUCTO = :id")
+                db.execute(query, {"id": producto_id})
+                db.commit()
+                logger.info(f"Producto {producto_id} eliminado con SQL directo")
+                return None
+            except Exception as e2:
+                db.rollback()
+                logger.error(f"Error con SQL directo: {str(e2)}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Error interno del servidor: No se pudo eliminar el producto"
+                )
 
     except HTTPException:
         raise
