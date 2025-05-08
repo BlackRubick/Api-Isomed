@@ -3,14 +3,14 @@ Puerto para el servicio de autenticación.
 """
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional
-from app.domain.entities.user import User
+from app.domain.entities.user import Usuario
 
 
 class AuthService(ABC):
     """Interfaz para el servicio de autenticación."""
 
     @abstractmethod
-    def register(self, user_data: Dict[str, Any]) -> User:
+    def register(self, user_data: Dict[str, Any]) -> Usuario:
         """Registra un nuevo usuario."""
         pass
 

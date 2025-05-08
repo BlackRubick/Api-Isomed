@@ -1,5 +1,5 @@
 """
-Controlador de autenticación para la API con logs de depuración.
+Controlador de autenticación para la API adaptado al nuevo esquema.
 """
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Request
@@ -8,7 +8,7 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 from app.application.services.auth_service import AuthServiceImpl
 from app.domain.exceptions import UserAlreadyExistsException, InvalidCredentialsException, InvalidTokenException
-from app.infrastructure.adapters.persistence.sqlalchemy_user_repository import SQLAlchemyUserRepository
+from app.infrastructure.adapters.persistence.sqlalchemy_user_repository import SQLAlchemyUsuarioRepository
 from app.infrastructure.adapters.security.jwt_manager import JWTManager
 from app.infrastructure.db.database import get_db
 
@@ -19,20 +19,20 @@ logger = logging.getLogger("auth_controller")
 
 # Modelos de Pydantic para las solicitudes y respuestas
 class UserRegistrationRequest(BaseModel):
-    name: str
+    nombre_completo: str
     email: EmailStr
     password: str
     confirmPassword: str
-    hospital: str = ""
-    position: str = ""
+    numero_cliente: str = ""
+    id_cliente: int = None
 
 
 class UserResponse(BaseModel):
     id: int
-    name: str
+    nombre_completo: str
     email: str
-    hospital: str = ""
-    position: str = ""
+    numero_cliente: str = ""
+    id_cliente: int = None
 
 
 class LoginRequest(BaseModel):
@@ -53,8 +53,8 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
 # Dependencia para obtener el servicio de autenticación
 def get_auth_service(db: Session = Depends(get_db)):
     jwt_manager = JWTManager()
-    user_repository = SQLAlchemyUserRepository(db)
-    return AuthServiceImpl(user_repository, jwt_manager)
+    usuario_repository = SQLAlchemyUsuarioRepository(db)
+    return AuthServiceImpl(usuario_repository, jwt_manager)
 
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -76,7 +76,13 @@ async def register(request: UserRegistrationRequest, req: Request, auth_service:
         # Log de datos de registro válidos
         logger.info(f"Datos de registro válidos para el email: {request.email}")
 
-        user_data = request.dict(exclude={"confirmPassword"})
+        user_data = {
+            "nombre_completo": request.nombre_completo,
+            "email": request.email,
+            "password": request.password,
+            "numero_cliente": request.numero_cliente,
+            "id_cliente": request.id_cliente
+        }
         logger.info(f"Intentando registrar usuario con email: {user_data['email']}")
 
         user = auth_service.register(user_data)
@@ -84,10 +90,10 @@ async def register(request: UserRegistrationRequest, req: Request, auth_service:
 
         return UserResponse(
             id=user.id,
-            name=user.name,
+            nombre_completo=user.nombre_completo,
             email=user.email,
-            hospital=user.hospital,
-            position=user.position
+            numero_cliente=user.numero_cliente,
+            id_cliente=user.id_cliente
         )
     except UserAlreadyExistsException as e:
         logger.error(f"Error de usuario existente: {str(e)}")
@@ -118,10 +124,10 @@ async def login(request: LoginRequest, req: Request, auth_service: AuthServiceIm
             token=result.token,
             user=UserResponse(
                 id=result.user.id,
-                name=result.user.name,
+                nombre_completo=result.user.nombre_completo,
                 email=result.user.email,
-                hospital=result.user.hospital,
-                position=result.user.position
+                numero_cliente=result.user.numero_cliente,
+                id_cliente=result.user.id_cliente
             )
         )
     except InvalidCredentialsException as e:
@@ -149,8 +155,8 @@ def get_current_user(
         payload = auth_service.validate_token(token)
         logger.info(f"Token validado para usuario_id: {payload.get('user_id')}")
 
-        user_repository = SQLAlchemyUserRepository(db)
-        user = user_repository.find_by_id(payload.get("user_id"))
+        usuario_repository = SQLAlchemyUsuarioRepository(db)
+        user = usuario_repository.find_by_id(payload.get("user_id"))
 
         if not user:
             logger.warning(f"Usuario no encontrado con ID: {payload.get('user_id')}")
@@ -162,10 +168,10 @@ def get_current_user(
         logger.info(f"Información de usuario recuperada para: {user.email}")
         return UserResponse(
             id=user.id,
-            name=user.name,
+            nombre_completo=user.nombre_completo,
             email=user.email,
-            hospital=user.hospital,
-            position=user.position
+            numero_cliente=user.numero_cliente,
+            id_cliente=user.id_cliente
         )
     except InvalidTokenException:
         logger.warning("Token inválido o expirado")

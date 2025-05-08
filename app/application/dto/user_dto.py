@@ -6,23 +6,24 @@ from typing import Optional
 
 
 @dataclass
-class UserRegistrationDto:
+class UsuarioRegistrationDto:
     """DTO para registro de usuario."""
-    name: str
+    nombre_completo: str
     email: str
     password: str
-    hospital: Optional[str] = ""
-    position: Optional[str] = ""
+    confirm_password: str
+    numero_cliente: Optional[str] = ""
+    id_cliente: Optional[int] = None
 
 
 @dataclass
-class UserResponseDto:
+class UsuarioResponseDto:
     """DTO para respuesta con datos de usuario."""
     id: int
-    name: str
+    nombre_completo: str
     email: str
-    hospital: Optional[str] = ""
-    position: Optional[str] = ""
+    numero_cliente: Optional[str] = ""
+    id_cliente: Optional[int] = None
 
 
 @dataclass
@@ -36,4 +37,4 @@ class LoginRequestDto:
 class LoginResponseDto:
     """DTO para respuesta de login."""
     token: str
-    user: UserResponseDto
+    user: UsuarioResponseDto

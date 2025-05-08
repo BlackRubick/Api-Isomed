@@ -7,6 +7,9 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.domain.exceptions import DomainException
 from app.infrastructure.api.controllers.auth_controller import router as auth_router
+from app.infrastructure.api.controllers.cliente_controller import router as cliente_router
+from app.infrastructure.api.controllers.producto_controller import router as producto_router
+from app.infrastructure.api.controllers.orden_trabajo_controller import router as orden_trabajo_router
 from app.infrastructure.config.settings import Settings
 from app.infrastructure.db.database import Base, engine
 
@@ -28,7 +31,7 @@ settings = Settings()
 # Aplicación FastAPI
 app = FastAPI(
     title=settings.APP_NAME,
-    description="API para gestión de autenticación de usuarios de ISOMED",
+    description="API para gestión del sistema ISOMED",
     version="1.0.0",
 )
 
@@ -38,15 +41,20 @@ app.add_middleware(
     allow_origins=[
         "https://isomed.com.mx",
         "http://54.161.137.230",
-        "http://34.232.185.39:8000"
+        "http://34.232.185.39:8000",
+        "http://localhost:3000"
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"],
 )
+
 # Incluir routers
 app.include_router(auth_router)
+app.include_router(cliente_router)
+app.include_router(producto_router)
+app.include_router(orden_trabajo_router)
 
 
 # Middleware para loguear solicitudes
